@@ -1,6 +1,7 @@
 import secrets
 import sqlite3
 import praw
+import prawcore.exceptions
 from config import settings
 
 REDDIT_SCOPES = ["identity", "history", "save"]
@@ -44,7 +45,6 @@ def get_auth_url(conn: sqlite3.Connection) -> str:
         "INSERT OR REPLACE INTO user_settings (key, value) VALUES ('oauth_state', ?)",
         (state,)
     )
-    conn.commit()
     return _reddit_base().auth.url(scopes=REDDIT_SCOPES, state=state, duration="permanent")
 
 
@@ -55,11 +55,15 @@ def handle_callback(conn: sqlite3.Connection, code: str, state: str) -> bool:
     if not row or row["value"] != state:
         return False
     reddit = _reddit_base()
-    refresh_token = reddit.auth.authorize(code)
+    try:
+        refresh_token = reddit.auth.authorize(code)
+    except prawcore.exceptions.OAuthException:
+        return False
+    if not refresh_token:
+        return False
     conn.execute(
         "INSERT OR REPLACE INTO user_settings (key, value) VALUES ('reddit_refresh_token', ?)",
         (refresh_token,)
     )
     conn.execute("DELETE FROM user_settings WHERE key = 'oauth_state'")
-    conn.commit()
     return True

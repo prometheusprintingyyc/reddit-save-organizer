@@ -1,4 +1,5 @@
 import sqlite3
+from typing import Optional
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
@@ -12,15 +13,22 @@ router = APIRouter()
 @router.get("/auth/login")
 def login(conn: sqlite3.Connection = Depends(get_db)):
     url = get_auth_url(conn)
-    return RedirectResponse(url)
+    return RedirectResponse(url, status_code=302)
 
 
 @router.get("/auth/callback")
-def callback(code: str, state: str, conn: sqlite3.Connection = Depends(get_db)):
+def callback(
+    state: str,
+    code: Optional[str] = None,
+    error: Optional[str] = None,
+    conn: sqlite3.Connection = Depends(get_db),
+):
+    if error or not code:
+        return RedirectResponse("/?error=access_denied", status_code=302)
     success = handle_callback(conn, code=code, state=state)
     if not success:
-        return RedirectResponse("/?error=auth_failed")
-    return RedirectResponse("/")
+        return RedirectResponse("/?error=auth_failed", status_code=302)
+    return RedirectResponse("/", status_code=302)
 
 
 @router.get("/api/auth/status")

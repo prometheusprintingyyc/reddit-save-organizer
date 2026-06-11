@@ -3,10 +3,7 @@ from unittest.mock import MagicMock, patch
 
 def test_is_authenticated_false_when_no_token(db):
     from reddit.auth import is_authenticated
-    with patch("reddit.auth.settings") as mock_settings:
-        mock_settings.database_path = ":memory:"
-        # Using db fixture directly
-        assert is_authenticated(db) is False
+    assert is_authenticated(db) is False
 
 
 def test_is_authenticated_true_when_token_present(db):
