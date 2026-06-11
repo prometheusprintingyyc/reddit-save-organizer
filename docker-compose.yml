@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   redditsave:
     image: ghcr.io/prometheusprintingyyc/reddit-save-organizer:latest
