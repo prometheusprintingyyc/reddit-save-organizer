@@ -1,3 +1,7 @@
+import os
+
+os.environ.setdefault("DATABASE_PATH", "./dev.db")
+
 import sqlite3
 import pytest
 from database import _create_schema
