@@ -90,6 +90,23 @@ def test_update_setting(client, db):
     assert row["value"] == "12"
 
 
+def test_update_setting_rejects_zero(client):
+    response = client.patch("/api/settings", json={"sync_interval_hours": 0})
+    assert response.status_code == 422
+
+
+def test_update_setting_rejects_negative(client):
+    response = client.patch("/api/settings", json={"sync_interval_hours": -1})
+    assert response.status_code == 422
+
+
+def test_get_settings_default_is_positive_int(client):
+    response = client.get("/api/settings")
+    data = response.json()
+    assert isinstance(data["sync_interval_hours"], int)
+    assert data["sync_interval_hours"] > 0
+
+
 def test_get_ai_stats(client, db):
     import time as t
     for status in ["pending", "done", "done", "error"]:

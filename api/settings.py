@@ -1,6 +1,6 @@
 import sqlite3
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from database import get_db
 from config import settings as app_settings
 
@@ -8,7 +8,7 @@ router = APIRouter()
 
 
 class SettingsPatch(BaseModel):
-    sync_interval_hours: int | None = None
+    sync_interval_hours: int | None = Field(default=None, ge=1)
 
 
 def _get_setting(conn: sqlite3.Connection, key: str, default: str) -> str:
@@ -34,6 +34,7 @@ def update_settings(body: SettingsPatch, conn: sqlite3.Connection = Depends(get_
             "INSERT OR REPLACE INTO user_settings (key, value) VALUES ('sync_interval_hours', ?)",
             (str(body.sync_interval_hours),),
         )
+        conn.commit()
     return {"ok": True}
 
 
