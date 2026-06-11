@@ -87,8 +87,9 @@ def delete_item(item_id: str, conn: sqlite3.Connection = Depends(get_db)):
         try:
             item = conn.execute("SELECT type FROM saved_items WHERE id = ?", (item_id,)).fetchone()
             if item:
-                obj = reddit.submission(id=item_id[3:]) if item["type"] == "post" \
-                    else reddit.comment(id=item_id[3:])
+                reddit_id = item_id[3:] if len(item_id) > 3 else item_id
+                obj = reddit.submission(id=reddit_id) if item["type"] == "post" \
+                    else reddit.comment(id=reddit_id)
                 obj.unsave()
         except Exception as e:
             logger.warning("Failed to unsave %s from Reddit: %s", item_id, e)
@@ -112,8 +113,9 @@ def bulk_unsave(body: BulkUnsaveBody, conn: sqlite3.Connection = Depends(get_db)
                     "SELECT type FROM saved_items WHERE id = ?", (item_id,)
                 ).fetchone()
                 if item:
-                    obj = reddit.submission(id=item_id[3:]) if item["type"] == "post" \
-                        else reddit.comment(id=item_id[3:])
+                    reddit_id = item_id[3:] if len(item_id) > 3 else item_id
+                    obj = reddit.submission(id=reddit_id) if item["type"] == "post" \
+                        else reddit.comment(id=reddit_id)
                     obj.unsave()
             except Exception as e:
                 logger.warning("Failed to unsave %s from Reddit: %s", item_id, e)
