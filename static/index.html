@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RedditSave</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- Connect Reddit view (shown when not authenticated) -->
+  <div id="view-connect" class="view">
+    <div class="connect-page">
+      <h2>RedditSave</h2>
+      <p>Connect your Reddit account to start organising your saved posts and comments.</p>
+      <a href="/auth/login" class="btn btn-primary">Connect Reddit</a>
+      <p id="connect-error" style="color:var(--red);display:none;"></p>
+    </div>
+  </div>
+
+  <!-- Browse view -->
+  <div id="view-browse" class="view">
+    <header class="header">
+      <span class="header-title">RedditSave</span>
+      <div class="header-actions">
+        <span id="header-count" style="color:var(--text2);font-size:.8rem;"></span>
+        <button class="btn" id="btn-sync">↻ Sync</button>
+        <button class="btn" onclick="showView('setup')">Settings</button>
+      </div>
+    </header>
+
+    <div class="filter-bar">
+      <div class="filter-row">
+        <input type="search" class="search-input" id="search-input" placeholder="Search titles, summaries, tags…">
+        <button class="btn" id="btn-filter-type" data-filter="type">Type ▾</button>
+        <button class="btn" id="btn-filter-age" data-filter="age">Age ▾</button>
+        <button class="btn" id="btn-filter-subreddit" data-filter="subreddit">Subreddit ▾</button>
+      </div>
+      <div class="filter-chips" id="filter-chips"></div>
+    </div>
+
+    <div class="cards-container">
+      <div class="stats-bar">
+        <span id="stats-text"></span>
+        <div id="pagination-top" class="pagination"></div>
+      </div>
+      <div id="cards-list"></div>
+      <div id="pagination-bottom" class="pagination"></div>
+    </div>
+
+    <div class="bulk-bar hidden" id="bulk-bar">
+      <span id="bulk-count"></span>
+      <div style="display:flex;gap:.5rem;">
+        <button class="btn btn-danger" id="btn-bulk-unsave">Unsave from Reddit</button>
+        <button class="btn" id="btn-bulk-clear">Clear selection</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Setup view -->
+  <div id="view-setup" class="view">
+    <header class="header">
+      <button class="btn" onclick="showView('browse')">← Back</button>
+      <span class="header-title">Settings &amp; Status</span>
+      <div></div>
+    </header>
+    <div class="setup-view">
+      <div class="setup-section">
+        <h3>Reddit Account</h3>
+        <div class="setup-row">
+          <span class="setup-label">Status</span>
+          <span class="setup-value" id="setup-auth-status">—</span>
+        </div>
+        <div class="setup-row">
+          <span class="setup-label">Username</span>
+          <span class="setup-value" id="setup-username">—</span>
+        </div>
+        <a href="/auth/login" class="btn" style="margin-top:.5rem;font-size:.8rem;">Re-authenticate</a>
+      </div>
+      <div class="setup-section">
+        <h3>Sync</h3>
+        <div class="setup-row">
+          <span class="setup-label">Last sync</span>
+          <span class="setup-value" id="setup-last-sync">—</span>
+        </div>
+        <div class="setup-row">
+          <span class="setup-label">Last sync status</span>
+          <span class="setup-value" id="setup-sync-status">—</span>
+        </div>
+        <button class="btn btn-primary" id="btn-setup-sync" style="margin-top:.5rem;font-size:.8rem;">Sync Now</button>
+      </div>
+      <div class="setup-section">
+        <h3>AI Processing</h3>
+        <div class="setup-row">
+          <span class="setup-label">Processed</span>
+          <span class="setup-value" id="setup-ai-done">—</span>
+        </div>
+        <div class="setup-row">
+          <span class="setup-label">Pending</span>
+          <span class="setup-value" id="setup-ai-pending">—</span>
+        </div>
+        <div class="setup-row">
+          <span class="setup-label">Errors</span>
+          <span class="setup-value" id="setup-ai-error">—</span>
+        </div>
+        <div class="progress-bar" style="margin-top:.25rem;">
+          <div class="progress-fill" id="setup-ai-progress" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="setup-section">
+        <h3>Sync Interval</h3>
+        <div class="settings-form">
+          <label style="color:var(--text2);font-size:.85rem;">Every</label>
+          <input type="number" class="settings-input" id="settings-interval" min="1" max="168">
+          <label style="color:var(--text2);font-size:.85rem;">hours</label>
+          <button class="btn btn-primary" id="btn-save-settings">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script src="/app.js"></script>
+</body>
+</html>
