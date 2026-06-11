@@ -16,36 +16,39 @@ def _get_conn() -> sqlite3.Connection:
 
 def run_sync_job() -> None:
     conn = _get_conn()
-    from reddit.auth import get_reddit_instance
-    from reddit.sync import sync_saved_items
-    reddit = get_reddit_instance(conn)
-    if not reddit:
-        conn.close()
-        return
-    log_id = conn.execute(
-        "INSERT INTO sync_log (started_at, status) VALUES (?, 'running')", (time.time(),)
-    ).lastrowid
-    conn.commit()
     try:
-        fetched, new = sync_saved_items(reddit, conn)
-        conn.execute(
-            "UPDATE sync_log SET status='done', completed_at=?, items_fetched=?, items_new=? WHERE id=?",
-            (time.time(), fetched, new, log_id)
-        )
-    except Exception as e:
-        conn.execute(
-            "UPDATE sync_log SET status='error', completed_at=?, error_message=? WHERE id=?",
-            (time.time(), str(e), log_id)
-        )
-    conn.commit()
-    conn.close()
+        from reddit.auth import get_reddit_instance
+        from reddit.sync import sync_saved_items
+        reddit = get_reddit_instance(conn)
+        if not reddit:
+            return
+        log_id = conn.execute(
+            "INSERT INTO sync_log (started_at, status) VALUES (?, 'running')", (time.time(),)
+        ).lastrowid
+        conn.commit()
+        try:
+            fetched, new = sync_saved_items(reddit, conn)
+            conn.execute(
+                "UPDATE sync_log SET status='done', completed_at=?, items_fetched=?, items_new=? WHERE id=?",
+                (time.time(), fetched, new, log_id)
+            )
+        except Exception as e:
+            conn.execute(
+                "UPDATE sync_log SET status='error', completed_at=?, error_message=? WHERE id=?",
+                (time.time(), str(e), log_id)
+            )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def run_ai_job() -> None:
     conn = _get_conn()
-    from ai.processor import process_batch
-    process_batch(conn)
-    conn.close()
+    try:
+        from ai.processor import process_batch
+        process_batch(conn)
+    finally:
+        conn.close()
 
 
 def create_scheduler(sync_interval_hours: int = 6) -> BackgroundScheduler:
