@@ -1,3 +1,5 @@
+import time
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -53,7 +55,6 @@ def test_create_tag_normalizes_to_lowercase(client):
 
 
 def test_add_tag_to_item(client, db):
-    import time
     db.execute("""
         INSERT INTO saved_items
         (id, type, title, body, subreddit, author, score, permalink,
@@ -72,7 +73,6 @@ def test_add_tag_to_item(client, db):
 
 
 def test_remove_tag_from_item(client, db):
-    import time
     db.execute("""
         INSERT INTO saved_items
         (id, type, title, body, subreddit, author, score, permalink,
@@ -89,3 +89,42 @@ def test_remove_tag_from_item(client, db):
         "SELECT 1 FROM item_tags WHERE item_id='t3_y' AND tag_id=?", (tag_id,)
     ).fetchone()
     assert row is None
+
+
+def test_remove_tag_from_item_returns_404_when_not_assigned(client, db):
+    db.execute("""
+        INSERT INTO saved_items
+        (id, type, title, body, subreddit, author, score, permalink,
+         created_utc, saved_at, synced_at, ai_status, ai_error_count, is_nsfw)
+        VALUES ('t3_z', 'post', 'T', 'B', 'sub', 'u', 1, '/r/sub', ?, ?, ?, 'done', 0, 0)
+    """, (time.time(), time.time(), time.time()))
+    db.execute("INSERT INTO tags (name, source) VALUES ('notthere', 'user')")
+    tag_id = db.execute("SELECT id FROM tags WHERE name='notthere'").fetchone()[0]
+    db.commit()
+    response = client.delete(f"/api/items/t3_z/tags/{tag_id}")
+    assert response.status_code == 404
+
+
+def test_add_tag_to_item_404_when_item_missing(client, db):
+    db.execute("INSERT INTO tags (name, source) VALUES ('sometag', 'user')")
+    tag_id = db.execute("SELECT id FROM tags WHERE name='sometag'").fetchone()[0]
+    db.commit()
+    response = client.post("/api/items/t3_nonexistent/tags", json={"tag_id": tag_id})
+    assert response.status_code == 404
+
+
+def test_add_tag_to_item_404_when_tag_missing(client, db):
+    db.execute("""
+        INSERT INTO saved_items
+        (id, type, title, body, subreddit, author, score, permalink,
+         created_utc, saved_at, synced_at, ai_status, ai_error_count, is_nsfw)
+        VALUES ('t3_w', 'post', 'T', 'B', 'sub', 'u', 1, '/r/sub', ?, ?, ?, 'done', 0, 0)
+    """, (time.time(), time.time(), time.time()))
+    db.commit()
+    response = client.post("/api/items/t3_w/tags", json={"tag_id": 9999})
+    assert response.status_code == 404
+
+
+def test_create_tag_blank_name_rejected(client):
+    response = client.post("/api/tags", json={"name": "   "})
+    assert response.status_code == 422

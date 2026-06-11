@@ -1,7 +1,7 @@
 import sqlite3
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from database import get_db
 
 router = APIRouter()
@@ -9,6 +9,13 @@ router = APIRouter()
 
 class TagCreate(BaseModel):
     name: str
+
+    @field_validator("name")
+    @classmethod
+    def name_not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("name must not be blank")
+        return v
 
 
 class ItemTagBody(BaseModel):
@@ -26,16 +33,17 @@ def list_tags(conn: sqlite3.Connection = Depends(get_db)):
 @router.post("/tags", status_code=201)
 def create_tag(body: TagCreate, conn: sqlite3.Connection = Depends(get_db)):
     name = body.name.strip().lower()
-    existing = conn.execute(
-        "SELECT id, name, color, source FROM tags WHERE name = ?", (name,)
-    ).fetchone()
-    if existing:
-        return JSONResponse(status_code=200, content=dict(existing))
-    conn.execute("INSERT INTO tags (name, source) VALUES (?, 'user')", (name,))
-    row = conn.execute(
-        "SELECT id, name, color, source FROM tags WHERE name = ?", (name,)
-    ).fetchone()
-    return dict(row)
+    try:
+        conn.execute("INSERT INTO tags (name, source) VALUES (?, 'user')", (name,))
+        row = conn.execute(
+            "SELECT id, name, color, source FROM tags WHERE name = ?", (name,)
+        ).fetchone()
+        return dict(row)
+    except sqlite3.IntegrityError:
+        row = conn.execute(
+            "SELECT id, name, color, source FROM tags WHERE name = ?", (name,)
+        ).fetchone()
+        return JSONResponse(status_code=200, content=dict(row))
 
 
 @router.post("/items/{item_id}/tags")
@@ -63,7 +71,9 @@ def add_tag_to_item(
 def remove_tag_from_item(
     item_id: str, tag_id: int, conn: sqlite3.Connection = Depends(get_db)
 ):
-    conn.execute(
+    cur = conn.execute(
         "DELETE FROM item_tags WHERE item_id = ? AND tag_id = ?", (item_id, tag_id)
     )
+    if cur.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Tag not assigned to item")
     return {"ok": True}
