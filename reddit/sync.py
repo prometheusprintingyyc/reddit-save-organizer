@@ -43,7 +43,7 @@ def sync_saved_items(reddit: praw.Reddit, conn: sqlite3.Connection) -> tuple[int
             permalink = f"https://reddit.com{item.permalink}"
             created_utc = item.created_utc
             is_nsfw = item.over_18
-            thumbnail_url = item.thumbnail if item.thumbnail.startswith("http") else None
+            thumbnail_url = item.thumbnail if item.thumbnail and item.thumbnail.startswith("http") else None
         elif isinstance(item, praw.models.Comment):
             item_id = item.fullname
             item_type = "comment"
@@ -56,7 +56,7 @@ def sync_saved_items(reddit: praw.Reddit, conn: sqlite3.Connection) -> tuple[int
             permalink = f"https://reddit.com{item.permalink}"
             created_utc = item.created_utc
             is_nsfw = False
-            is_deleted = False
+            is_deleted = item.body in ("[deleted]", "[removed]")
             thumbnail_url = None
         else:
             continue
