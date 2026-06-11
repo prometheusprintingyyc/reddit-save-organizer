@@ -90,3 +90,29 @@ def test_bulk_unsave_removes_items(client, db):
     assert response.status_code == 200
     count = db.execute("SELECT COUNT(*) FROM saved_items").fetchone()[0]
     assert count == 0
+
+
+def test_delete_item_returns_404_when_not_found(client):
+    with patch("api.items.get_reddit_instance", return_value=None):
+        response = client.delete("/api/items/t3_nonexistent")
+    assert response.status_code == 404
+
+
+def test_list_items_filter_by_search(client, db):
+    _seed_item(db, "t3_match", title="Python tutorial for beginners")
+    _seed_item(db, "t3_nomatch", title="Unrelated post about cooking")
+    response = client.get("/api/items?search=tutorial")
+    items = response.json()["items"]
+    assert len(items) == 1
+    assert items[0]["id"] == "t3_match"
+
+
+def test_list_items_filter_by_age(client, db):
+    old_utc = time.time() - (400 * 24 * 3600)
+    recent_utc = time.time() - (30 * 24 * 3600)
+    _seed_item(db, "t3_old", title="Old Post", created_utc=old_utc)
+    _seed_item(db, "t3_new", title="New Post", created_utc=recent_utc)
+    response = client.get("/api/items?age=old")
+    items = response.json()["items"]
+    assert len(items) == 1
+    assert items[0]["id"] == "t3_old"
