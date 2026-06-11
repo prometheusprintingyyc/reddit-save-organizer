@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 import sqlite3
 import time
@@ -7,6 +8,8 @@ from urllib.parse import urlparse
 import google.generativeai as genai
 
 from config import settings
+
+logger = logging.getLogger(__name__)
 
 BATCH_SIZE = 17
 
@@ -98,7 +101,8 @@ def process_batch(conn: sqlite3.Connection) -> int:
             conn.commit()
             existing_tags = list(set(existing_tags + tags))
             processed += 1
-        except Exception:
+        except Exception as e:
+            logger.warning("AI processing failed for %s: %s", item["id"], e)
             conn.execute("""
                 UPDATE saved_items
                 SET ai_error_count = ai_error_count + 1,
