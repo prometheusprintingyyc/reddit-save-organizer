@@ -1,7 +1,7 @@
 import sqlite3
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
-from database import get_db
+from database import get_db, get_credential
 from config import settings as app_settings
 
 router = APIRouter()
@@ -35,6 +35,43 @@ def update_settings(body: SettingsPatch, conn: sqlite3.Connection = Depends(get_
             (str(body.sync_interval_hours),),
         )
         conn.commit()
+    return {"ok": True}
+
+
+class CredentialsBody(BaseModel):
+    reddit_client_id: str
+    reddit_client_secret: str
+    reddit_redirect_uri: str
+    gemini_api_key: str
+
+
+@router.get("/setup/status")
+def setup_status(conn: sqlite3.Connection = Depends(get_db)):
+    reddit_ok = bool(
+        (get_credential(conn, "reddit_client_id") or app_settings.reddit_client_id) and
+        (get_credential(conn, "reddit_client_secret") or app_settings.reddit_client_secret)
+    )
+    gemini_ok = bool(
+        get_credential(conn, "gemini_api_key") or app_settings.gemini_api_key
+    )
+    return {"reddit_configured": reddit_ok, "gemini_configured": gemini_ok}
+
+
+@router.post("/setup/credentials", status_code=200)
+def save_credentials(body: CredentialsBody, conn: sqlite3.Connection = Depends(get_db)):
+    pairs = [
+        ("reddit_client_id", body.reddit_client_id.strip()),
+        ("reddit_client_secret", body.reddit_client_secret.strip()),
+        ("reddit_redirect_uri", body.reddit_redirect_uri.strip()),
+        ("gemini_api_key", body.gemini_api_key.strip()),
+    ]
+    for key, value in pairs:
+        if value:
+            conn.execute(
+                "INSERT OR REPLACE INTO user_settings (key, value) VALUES (?, ?)",
+                (key, value),
+            )
+    conn.commit()
     return {"ok": True}
 
 

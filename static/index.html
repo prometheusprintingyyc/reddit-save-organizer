@@ -9,6 +9,39 @@
 <body>
 <div id="app">
 
+  <!-- Credentials setup view (shown on first run) -->
+  <div id="view-credentials" class="view">
+    <div class="connect-page" style="gap:1.5rem;">
+      <h2>Welcome to RedditSave</h2>
+      <p>Enter your API credentials to get started. These are stored locally in your database — never sent anywhere else.</p>
+      <div style="width:100%;max-width:480px;display:flex;flex-direction:column;gap:.75rem;text-align:left;">
+        <div class="setup-section">
+          <h3 style="margin-bottom:.75rem;">Reddit App</h3>
+          <p style="font-size:.78rem;color:var(--text2);margin-bottom:.75rem;">
+            Create a <strong>web app</strong> at
+            <a href="https://www.reddit.com/prefs/apps" target="_blank" rel="noopener">reddit.com/prefs/apps</a>.
+            Set the redirect URI to <code id="cred-redirect-hint" style="font-size:.75rem;background:var(--bg3);padding:.1rem .3rem;border-radius:3px;"></code>
+          </p>
+          <div style="display:flex;flex-direction:column;gap:.5rem;">
+            <input class="search-input" id="cred-client-id" placeholder="Client ID" autocomplete="off">
+            <input class="search-input" id="cred-client-secret" placeholder="Client Secret" type="password" autocomplete="off">
+            <input class="search-input" id="cred-redirect-uri" placeholder="Redirect URI (e.g. http://192.168.1.50:8080/auth/callback)">
+          </div>
+        </div>
+        <div class="setup-section">
+          <h3 style="margin-bottom:.75rem;">Gemini API</h3>
+          <p style="font-size:.78rem;color:var(--text2);margin-bottom:.75rem;">
+            Get a free key at
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">aistudio.google.com</a>.
+          </p>
+          <input class="search-input" id="cred-gemini-key" placeholder="Gemini API Key" type="password" autocomplete="off">
+        </div>
+        <p id="cred-error" style="color:var(--red);font-size:.82rem;display:none;"></p>
+        <button class="btn btn-primary" id="btn-save-credentials" style="width:100%;justify-content:center;">Save &amp; Continue</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Connect Reddit view (shown when not authenticated) -->
   <div id="view-connect" class="view">
     <div class="connect-page">
@@ -76,7 +109,10 @@
           <span class="setup-label">Username</span>
           <span class="setup-value" id="setup-username">—</span>
         </div>
-        <a href="/auth/login" class="btn" style="margin-top:.5rem;font-size:.8rem;">Re-authenticate</a>
+        <div style="display:flex;gap:.5rem;margin-top:.5rem;">
+          <a href="/auth/login" class="btn" style="font-size:.8rem;">Re-authenticate</a>
+          <button class="btn" onclick="showView('credentials')" style="font-size:.8rem;">Update API credentials</button>
+        </div>
       </div>
       <div class="setup-section">
         <h3>Sync</h3>

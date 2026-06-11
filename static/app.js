@@ -22,6 +22,14 @@ async function init() {
     err.style.display = '';
   }
 
+  // Check if API credentials are configured
+  const setup = await fetch('/api/setup/status').then(r => r.json());
+  if (!setup.reddit_configured || !setup.gemini_configured) {
+    initCredentialsView();
+    showView('credentials');
+    return;
+  }
+
   const res = await fetch('/api/auth/status');
   const data = await res.json();
   if (!data.authenticated) {
@@ -32,6 +40,43 @@ async function init() {
   await loadTags();
   await loadItems();
   setupEventListeners();
+}
+
+// ---- Credentials setup ----
+function initCredentialsView() {
+  const hint = document.getElementById('cred-redirect-hint');
+  if (hint) hint.textContent = `${window.location.origin}/auth/callback`;
+
+  const defaultRedirect = `${window.location.origin}/auth/callback`;
+  const uriInput = document.getElementById('cred-redirect-uri');
+  if (uriInput && !uriInput.value) uriInput.value = defaultRedirect;
+
+  document.getElementById('btn-save-credentials').addEventListener('click', async () => {
+    const clientId = document.getElementById('cred-client-id').value.trim();
+    const clientSecret = document.getElementById('cred-client-secret').value.trim();
+    const redirectUri = document.getElementById('cred-redirect-uri').value.trim();
+    const geminiKey = document.getElementById('cred-gemini-key').value.trim();
+    const errEl = document.getElementById('cred-error');
+
+    if (!clientId || !clientSecret || !redirectUri || !geminiKey) {
+      errEl.textContent = 'All fields are required.';
+      errEl.style.display = '';
+      return;
+    }
+    errEl.style.display = 'none';
+
+    try {
+      await api('/api/setup/credentials', {
+        method: 'POST',
+        body: { reddit_client_id: clientId, reddit_client_secret: clientSecret,
+                reddit_redirect_uri: redirectUri, gemini_api_key: geminiKey },
+      });
+      showView('connect');
+    } catch (e) {
+      errEl.textContent = 'Failed to save credentials: ' + e.message;
+      errEl.style.display = '';
+    }
+  });
 }
 
 // ---- API helpers ----

@@ -62,6 +62,13 @@ def init_db() -> None:
     conn.close()
 
 
+def get_credential(conn: sqlite3.Connection, key: str, default: str = "") -> str:
+    row = conn.execute(
+        "SELECT value FROM user_settings WHERE key = ?", (key,)
+    ).fetchone()
+    return row["value"] if row else default
+
+
 def get_db():
     conn = sqlite3.connect(settings.database_path)
     conn.row_factory = sqlite3.Row

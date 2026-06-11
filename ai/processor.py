@@ -8,14 +8,16 @@ from urllib.parse import urlparse
 import google.generativeai as genai
 
 from config import settings
+from database import get_credential
 
 logger = logging.getLogger(__name__)
 
 BATCH_SIZE = 17
 
 
-def _get_model():
-    genai.configure(api_key=settings.gemini_api_key)
+def _get_model(conn: sqlite3.Connection | None = None):
+    api_key = (get_credential(conn, "gemini_api_key") if conn else "") or settings.gemini_api_key
+    genai.configure(api_key=api_key)
     return genai.GenerativeModel("gemini-1.5-flash")
 
 
@@ -73,7 +75,7 @@ def process_batch(conn: sqlite3.Connection) -> int:
     if not rows:
         return 0
 
-    model = _get_model()
+    model = _get_model(conn)
     existing_tags = _get_existing_tags(conn)
     processed = 0
 
