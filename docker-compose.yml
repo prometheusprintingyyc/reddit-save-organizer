@@ -1,6 +1,6 @@
 services:
   redditsave:
-    build: .
+    image: ghcr.io/prometheusprintingyyc/reddit-save-organizer:latest
     ports:
       - "8080:8080"
     volumes:
