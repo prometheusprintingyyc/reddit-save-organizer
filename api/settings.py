@@ -41,7 +41,8 @@ def update_settings(body: SettingsPatch, conn: sqlite3.Connection = Depends(get_
 class CredentialsBody(BaseModel):
     reddit_client_id: str
     reddit_client_secret: str
-    reddit_redirect_uri: str
+    reddit_username: str
+    reddit_password: str
     gemini_api_key: str
 
 
@@ -49,7 +50,9 @@ class CredentialsBody(BaseModel):
 def setup_status(conn: sqlite3.Connection = Depends(get_db)):
     reddit_ok = bool(
         (get_credential(conn, "reddit_client_id") or app_settings.reddit_client_id) and
-        (get_credential(conn, "reddit_client_secret") or app_settings.reddit_client_secret)
+        (get_credential(conn, "reddit_client_secret") or app_settings.reddit_client_secret) and
+        (get_credential(conn, "reddit_username") or app_settings.reddit_username) and
+        (get_credential(conn, "reddit_password") or app_settings.reddit_password)
     )
     gemini_ok = bool(
         get_credential(conn, "gemini_api_key") or app_settings.gemini_api_key
@@ -62,7 +65,8 @@ def save_credentials(body: CredentialsBody, conn: sqlite3.Connection = Depends(g
     pairs = [
         ("reddit_client_id", body.reddit_client_id.strip()),
         ("reddit_client_secret", body.reddit_client_secret.strip()),
-        ("reddit_redirect_uri", body.reddit_redirect_uri.strip()),
+        ("reddit_username", body.reddit_username.strip()),
+        ("reddit_password", body.reddit_password.strip()),
         ("gemini_api_key", body.gemini_api_key.strip()),
     ]
     for key, value in pairs:

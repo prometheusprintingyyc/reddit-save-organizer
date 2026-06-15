@@ -15,14 +15,6 @@ function showView(name) {
 }
 
 async function init() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('error') === 'auth_failed') {
-    const err = document.getElementById('connect-error');
-    err.textContent = 'Authentication failed. Please try again.';
-    err.style.display = '';
-  }
-
-  // Check if API credentials are configured
   const setup = await fetch('/api/setup/status').then(r => r.json());
   if (!setup.reddit_configured || !setup.gemini_configured) {
     initCredentialsView();
@@ -33,7 +25,8 @@ async function init() {
   const res = await fetch('/api/auth/status');
   const data = await res.json();
   if (!data.authenticated) {
-    showView('connect');
+    initCredentialsView('Could not connect to Reddit. Please check your credentials.');
+    showView('credentials');
     return;
   }
   showView('browse');
@@ -43,38 +36,52 @@ async function init() {
 }
 
 // ---- Credentials setup ----
-function initCredentialsView() {
-  const hint = document.getElementById('cred-redirect-hint');
-  if (hint) hint.textContent = `${window.location.origin}/auth/callback`;
+function initCredentialsView(errorMsg) {
+  const errEl = document.getElementById('cred-error');
+  if (errorMsg) {
+    errEl.textContent = errorMsg;
+    errEl.style.display = '';
+  } else {
+    errEl.style.display = 'none';
+  }
 
-  const defaultRedirect = `${window.location.origin}/auth/callback`;
-  const uriInput = document.getElementById('cred-redirect-uri');
-  if (uriInput && !uriInput.value) uriInput.value = defaultRedirect;
+  const btn = document.getElementById('btn-save-credentials');
+  const newBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(newBtn, btn);
 
-  document.getElementById('btn-save-credentials').addEventListener('click', async () => {
+  newBtn.addEventListener('click', async () => {
     const clientId = document.getElementById('cred-client-id').value.trim();
     const clientSecret = document.getElementById('cred-client-secret').value.trim();
-    const redirectUri = document.getElementById('cred-redirect-uri').value.trim();
+    const username = document.getElementById('cred-username').value.trim();
+    const password = document.getElementById('cred-password').value.trim();
     const geminiKey = document.getElementById('cred-gemini-key').value.trim();
-    const errEl = document.getElementById('cred-error');
+    const err = document.getElementById('cred-error');
 
-    if (!clientId || !clientSecret || !redirectUri || !geminiKey) {
-      errEl.textContent = 'All fields are required.';
-      errEl.style.display = '';
+    if (!clientId || !clientSecret || !username || !password || !geminiKey) {
+      err.textContent = 'All fields are required.';
+      err.style.display = '';
       return;
     }
-    errEl.style.display = 'none';
+    err.style.display = 'none';
 
     try {
       await api('/api/setup/credentials', {
         method: 'POST',
-        body: { reddit_client_id: clientId, reddit_client_secret: clientSecret,
-                reddit_redirect_uri: redirectUri, gemini_api_key: geminiKey },
+        body: {
+          reddit_client_id: clientId,
+          reddit_client_secret: clientSecret,
+          reddit_username: username,
+          reddit_password: password,
+          gemini_api_key: geminiKey,
+        },
       });
-      showView('connect');
+      showView('browse');
+      await loadTags();
+      await loadItems();
+      setupEventListeners();
     } catch (e) {
-      errEl.textContent = 'Failed to save credentials: ' + e.message;
-      errEl.style.display = '';
+      err.textContent = 'Failed to save credentials: ' + e.message;
+      err.style.display = '';
     }
   });
 }
@@ -237,9 +244,7 @@ async function tagInputKey(e, itemId) {
 }
 
 async function applyTag(itemId, tagName) {
-  // Step 1: create or get existing tag (returns id)
   const tag = await api('/api/tags', { method: 'POST', body: { name: tagName } });
-  // Step 2: assign tag to item using its integer id
   await api(`/api/items/${itemId}/tags`, { method: 'POST', body: { tag_id: tag.id } });
   document.getElementById('tag-input-' + itemId).style.display = 'none';
   await loadTags();

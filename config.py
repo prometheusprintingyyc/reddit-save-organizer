@@ -5,7 +5,8 @@ class Settings(BaseSettings):
 
     reddit_client_id: str = ""
     reddit_client_secret: str = ""
-    reddit_redirect_uri: str = "http://localhost:8080/auth/callback"
+    reddit_username: str = ""
+    reddit_password: str = ""
     gemini_api_key: str = ""
     sync_interval_hours: int = 6
     database_path: str = "/data/redditsave.db"

@@ -1,35 +1,56 @@
 from unittest.mock import MagicMock, patch
 
 
-def test_is_authenticated_false_when_no_token(db):
+def test_is_authenticated_false_when_no_credentials(db):
     from reddit.auth import is_authenticated
     assert is_authenticated(db) is False
 
 
-def test_is_authenticated_true_when_token_present(db):
+def test_is_authenticated_false_when_partial_credentials(db):
     from reddit.auth import is_authenticated
-    db.execute("INSERT INTO user_settings (key, value) VALUES ('reddit_refresh_token', 'tok123')")
+    db.execute("INSERT INTO user_settings (key, value) VALUES ('reddit_client_id', 'abc')")
+    db.execute("INSERT INTO user_settings (key, value) VALUES ('reddit_client_secret', 'xyz')")
+    db.commit()
+    assert is_authenticated(db) is False
+
+
+def test_is_authenticated_true_when_all_credentials_present(db):
+    from reddit.auth import is_authenticated
+    for key, val in [
+        ("reddit_client_id", "abc"),
+        ("reddit_client_secret", "xyz"),
+        ("reddit_username", "testuser"),
+        ("reddit_password", "testpass"),
+    ]:
+        db.execute("INSERT INTO user_settings (key, value) VALUES (?, ?)", (key, val))
     db.commit()
     assert is_authenticated(db) is True
 
 
-def test_handle_callback_rejects_wrong_state(db):
-    from reddit.auth import handle_callback
-    db.execute("INSERT INTO user_settings (key, value) VALUES ('oauth_state', 'correct_state')")
-    db.commit()
-    result = handle_callback(db, code="somecode", state="wrong_state")
-    assert result is False
+def test_get_reddit_instance_returns_none_when_missing_credentials(db):
+    from reddit.auth import get_reddit_instance
+    assert get_reddit_instance(db) is None
 
 
-def test_handle_callback_stores_token(db):
-    from reddit.auth import handle_callback
-    db.execute("INSERT INTO user_settings (key, value) VALUES ('oauth_state', 'mystate')")
+def test_get_reddit_instance_returns_reddit_when_credentials_present(db):
+    from reddit.auth import get_reddit_instance
+    for key, val in [
+        ("reddit_client_id", "abc"),
+        ("reddit_client_secret", "xyz"),
+        ("reddit_username", "testuser"),
+        ("reddit_password", "testpass"),
+    ]:
+        db.execute("INSERT INTO user_settings (key, value) VALUES (?, ?)", (key, val))
     db.commit()
     with patch("reddit.auth.praw.Reddit") as MockReddit:
         mock_reddit = MagicMock()
-        mock_reddit.auth.authorize.return_value = "refresh_token_abc"
         MockReddit.return_value = mock_reddit
-        result = handle_callback(db, code="authcode", state="mystate")
-    assert result is True
-    row = db.execute("SELECT value FROM user_settings WHERE key = 'reddit_refresh_token'").fetchone()
-    assert row["value"] == "refresh_token_abc"
+        result = get_reddit_instance(db)
+    assert result is mock_reddit
+    MockReddit.assert_called_once_with(
+        client_id="abc",
+        client_secret="xyz",
+        username="testuser",
+        password="testpass",
+        user_agent="redditsave/1.0",
+    )
